@@ -187,7 +187,6 @@ class Ui_Form_mod(object):
     self.screenReview(Form)
 
   def send_print(self, filename):
-    self.log.debug("send_print: Printing image")
     try:
       conn = cups.Connection()
       printers = conn.getPrinters()
@@ -195,11 +194,8 @@ class Ui_Form_mod(object):
       default_printer = conn.getDefault()
       cups.setUser("pi")
       conn.printFile(default_printer, filename, '', {'fit-to-page':'True'})
-      self.log.info('send_print: Sending to printer...')
     except:
-      self.log.exception('print failed')
-      self.status("Print failed :(")
-    self.log.info("send_print: Image printed")
+      pass
 
   def screenReview(self, Form):
     self.screen = 3
