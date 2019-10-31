@@ -1,6 +1,8 @@
 import sys
 import os
 import subprocess
+import cups
+import pprint
 
 from config import fotoboxText, fotoboxCfg
 
@@ -184,6 +186,21 @@ class Ui_Form_mod(object):
 
     self.screenReview(Form)
 
+  def send_print(self, filename):
+    self.log.debug("send_print: Printing image")
+    try:
+      conn = cups.Connection()
+      printers = conn.getPrinters()
+      # default_printer = printers.keys()[self.selected_printer]#defaults to the first printer installed
+      default_printer = conn.getDefault()
+      cups.setUser("pi")
+      conn.printFile(default_printer, filename, '', {'fit-to-page':'True'})
+      self.log.info('send_print: Sending to printer...')
+    except:
+      self.log.exception('print failed')
+      self.status("Print failed :(")
+    self.log.info("send_print: Image printed")
+
   def screenReview(self, Form):
     self.screen = 3
 
@@ -208,6 +225,7 @@ class Ui_Form_mod(object):
   def doConfirm(self, Form):
     move(self.temp+self.lastPhoto, self.save+self.lastPhoto)
     print("Saved " + self.save+self.lastPhoto)
+    self.send_print(self.save+self.lastPhoto)
     self.screenMain(window)
 
   def retry(self, Form):
