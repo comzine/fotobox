@@ -13,7 +13,7 @@ yes | sudo apt install openbox xorg python3 python3-picamera python3-pyqt5 pytho
 # Suggested tools: sxiv tmux vim usbmount x11vnc
 
 echo "Installing Fotobox"
-git clone https://github.com/adlerweb/fotobox.git /home/pi/fotobox
+git clone https://github.com/comzine/fotobox.git /home/pi/fotobox
 
 echo "Configuring autostart"
 mkdir -p ~/.config/openbox
