@@ -12,16 +12,16 @@
         margin: 0;
         font-family: monospace, sans-serif;
     ">
-    <div id="fotobox" style="width: 1280px; height: 1024px; background-image: url('backdrop.png');">
+    <div id="fotobox" style="width: 1920px; height: 1080px; background-image: url('backdrop_small.png');">
 
         <div
             id="infobox"
             style="
                 position: fixed;
-                left: 65px;
-                top: 24px;
-                width: 825px;
-                height: 105px;
+                left: 35px;
+                top: 27px;
+                width: 1350px;
+                height: 90px;
                 font-size: 24px;
                 overflow: hidden;
                 display: flex;
@@ -33,78 +33,110 @@
         ${info}
         </div>
 
+        <div
+                id="infoboxPreview"
+                style="
+                position: fixed;
+                left: 1534px;
+                top: 27px;
+                width: 360px;
+                height: 390px;
+                font-size: 24px;
+                overflow: hidden;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+            "
+        >
+            ${infoPreview}
+        </div>
+
         <nav>
             <div
                 id="Button1"
                 style="
                     position: fixed;
-                    right: 15px;
-                    top: 550px;
+                    left: 1534px;
+                    top: 736px;
                     font-size: 40px;
-                    width: 295px;
-                    height: 97px;
-                    text-align: right;
+                    width: 360px;
+                    height: 77px;
+                    text-align: center;
                     display: flex;
                     align-items: center;
-                    justify-content: flex-end;
+                    /*justify-content: flex-start;*/
                     overflow: hidden;
+                    background-color: lightgreen;
                 ">
-                <div>
-                ${btn1}
+                <div style="margin: auto;">${btn1}</div>
             </div>
-
             <div
-                id="Button2"
-                style="
+                    id="Button2"
+                    style="
                     position: fixed;
-                    right: 15px;
-                    top: 700px;
+                    left: 1534px;
+                    top: 856px;
                     font-size: 40px;
-                    width: 295px;
-                    height: 97px;
-                    text-align: right;
+                    width: 360px;
+                    height: 77px;
+                    text-align: center;
                     display: flex;
                     align-items: center;
-                    justify-content: flex-end;
+                    /*justify-content: flex-start;*/
                     overflow: hidden;
+                    background-color: orange;
                 ">
-                <div>
-                ${btn2}
+                <div style="margin: auto;">${btn2}</div>
             </div>
-
             <div
-                id="Button3"
-                style="
+                    id="Button3"
+                    style="
                     position: fixed;
-                    right: 15px;
-                    top: 850px;
+                    left: 1534px;
+                    top: 966px;
                     font-size: 40px;
-                    width: 295px;
-                    height: 97px;
-                    text-align: right;
+                    width: 360px;
+                    height: 77px;
+                    text-align: center;
                     display: flex;
                     align-items: center;
-                    justify-content: flex-end;
+                    /*justify-content: flex-start;*/
                     overflow: hidden;
+                    background-color: lightblue;
                 ">
-                <div>
-                ${btn3}
+                <div style="margin: auto;">${btn3}</div>
             </div>
         </nav>
 
-        <img src="${image}" style="height: 720px; width: 960px; background-image: url('init.png'); position: fixed; left: 9px; bottom: 43px;" />
+        <img src="${image}" style="height: 900px; width: 1350px; background-image: url('init.png'); position: fixed; left: 35px; top: 157px;" />
+
+        <img src="${compose}" style="height: 240px; width: 360px; background-image: url('init.png'); position: fixed; left: 1534px; top: 446px; object-fit: contain;" />
+
+        <div id="Timer" style="position: fixed;
+                    left: 1534px;
+                    top: 25px;
+                    font-size: 300px;
+                    width: 360px;
+                    height: 390px;
+                    text-align: center;
+                    display: flex;
+                    align-items: center;
+                    /*justify-content: flex-start;*/
+                    overflow: hidden;"><div style="margin: auto;">${timer}</div></div>
 
         <footer
             style="
                 position: fixed;
-                left: 0px;
-                bottom: 0px;
+                left: 20px;
+                bottom: 50px;
                 width: 1280px;
-                height: 40px;
+                height: 800px;
                 text-align: center;
                 font-size: 28.5px;
                 margin-top: 3px;
                 color: rgb(122, 122, 122);
+                visibility: hidden;
             ">
             ${status}
         </footer>
