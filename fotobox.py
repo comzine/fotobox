@@ -20,7 +20,7 @@ from PIL import Image, ImageDraw
 
 if not fotoboxCfg['nopi']:
   try:
-    from picamera import PiCamera
+    from picamera2 import Picamera2, Preview
   except ImportError:
     print("PiCamera not found - operating in simulation mode")
     fotoboxCfg['nopi']            = True
@@ -72,11 +72,25 @@ class Ui_Form_mod(object):
   def initSystem(self, Form):
     #Camera
     if not fotoboxCfg['nopi']:
-      self.camera = PiCamera()
-      self.camera.hflip = fotoboxCfg['cam-c-hflip']
+      self.cam2 = Picamera2()
+      # self.camera.hflip = fotoboxCfg['cam-c-hflip']
       if(fotoboxCfg['cam-p-hflip'] == fotoboxCfg['cam-c-hflip']):
         fotoboxCfg['cam-p-hflip'] = False
     self.isLive = False
+    
+    GPIO.setmode(GPIO.BCM)
+
+    GPIO.setup(26, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    GPIO.setup(20, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    GPIO.setup(13, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
+    GPIO.setup(19, GPIO.OUT)
+    GPIO.setup(21, GPIO.OUT)
+    GPIO.setup(16, GPIO.OUT)
+
+    GPIO.output(19, GPIO.HIGH)
+    GPIO.output(21, GPIO.HIGH)
+    GPIO.output(16, GPIO.HIGH)
 
     #Countdown Updater
     self.timerCnt = QTimer(Form)
@@ -141,16 +155,11 @@ class Ui_Form_mod(object):
     if not self.isLive:
       self.tplImage = "liveBack.png"
       if not fotoboxCfg['nopi']:
-        self.camera.resolution = (1640, 1232)
-        #self.camera.preview_resolution = (1640, 1232)
-        #self.camera.resolution = (fotoboxCfg['cam-c-width'], fotoboxCfg['cam-c-height'])
-        self.camera.preview_fullscreen=False
-        self.camera.preview_window=(fotoboxCfg['cam-p-x'], fotoboxCfg['cam-p-y'], fotoboxCfg['cam-p-width'], fotoboxCfg['cam-p-height'])
-        #self.camera.start_preview(resolution=(1640, 1232), hflip=fotoboxCfg['cam-p-hflip'])
-        self.camera.start_preview(resolution=(1640, 1232), window = (fotoboxCfg['cam-p-x'], fotoboxCfg['cam-p-y'], fotoboxCfg['cam-p-width'], fotoboxCfg['cam-p-height']), hflip=fotoboxCfg['cam-p-hflip'])
-        #self.camera.start_preview(fullscreen=False, window = (fotoboxCfg['cam-p-x'], fotoboxCfg['cam-p-y'], fotoboxCfg['cam-p-width'], fotoboxCfg['cam-p-height']), hflip=fotoboxCfg['cam-p-hflip'])
-        #self.camera.start_preview(window = (fotoboxCfg['cam-p-x'], fotoboxCfg['cam-p-y'], fotoboxCfg['cam-p-width'], fotoboxCfg['cam-p-height']), hflip=fotoboxCfg['cam-p-hflip'])
-        # self.camera.start_preview(fullscreen=False, window = (fotoboxCfg['cam-p-x'], fotoboxCfg['cam-p-y'], fotoboxCfg['cam-p-width'], fotoboxCfg['cam-p-height']), hflip=fotoboxCfg['cam-p-hflip'])
+        #self.camera.resolution = (1640, 1232)
+        #self.camera.preview_fullscreen=False
+        #self.camera.preview_window=(fotoboxCfg['cam-p-x'], fotoboxCfg['cam-p-y'], fotoboxCfg['cam-p-width'], fotoboxCfg['cam-p-height'])
+        #self.camera.start_preview(resolution=(1640, 1232), window = (fotoboxCfg['cam-p-x'], fotoboxCfg['cam-p-y'], fotoboxCfg['cam-p-width'], fotoboxCfg['cam-p-height']), hflip=fotoboxCfg['cam-p-hflip'])
+      
         print("Enabling camera preview")
       self.isLive = True
 
@@ -159,6 +168,7 @@ class Ui_Form_mod(object):
     self.tplInstructPreview = self.tplInstruct
 
     self.updateHtml(Form)
+    self.cam2.start_preview(Preview.DRM, x=100, y=200, width=800, height=600)
 
   def screenPrint(self, Form):
     self.screen = 5
@@ -190,8 +200,8 @@ class Ui_Form_mod(object):
     if not self.isLive:
       self.tplImage = "liveBack.png"
       if not fotoboxCfg['nopi']:
-        self.camera.preview_window=(fotoboxCfg['cam-p-x'], fotoboxCfg['cam-p-y'], fotoboxCfg['cam-p-width'], fotoboxCfg['cam-p-height'])
-        self.camera.start_preview(resolution=(1640, 1232), fullscreen=False, window = (fotoboxCfg['cam-p-x'], fotoboxCfg['cam-p-y'], fotoboxCfg['cam-p-width'], fotoboxCfg['cam-p-height']), hflip=fotoboxCfg['cam-p-hflip'])
+        # self.camera.preview_window=(fotoboxCfg['cam-p-x'], fotoboxCfg['cam-p-y'], fotoboxCfg['cam-p-width'], fotoboxCfg['cam-p-height'])
+        # self.camera.start_preview(resolution=(1640, 1232), fullscreen=False, window = (fotoboxCfg['cam-p-x'], fotoboxCfg['cam-p-y'], fotoboxCfg['cam-p-width'], fotoboxCfg['cam-p-height']), hflip=fotoboxCfg['cam-p-hflip'])
         print("Enabling camera preview")
       self.isLive = True
 
@@ -235,13 +245,14 @@ class Ui_Form_mod(object):
     if(self.isLive):
       self.isLive=False
       if not fotoboxCfg['nopi']:
-        self.camera.stop_preview()
+        # self.camera.stop_preview()
         print("Disabling camera preview")
     self.lastPhoto = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".jpg"
     if not fotoboxCfg['nopi']:
       if not fotoboxCfg['gphoto']:
-        self.camera.resolution = (fotoboxCfg['cam-c-width'], fotoboxCfg['cam-c-height'])
-        self.camera.capture(self.temp+self.lastPhoto)
+        # self.camera.resolution = (fotoboxCfg['cam-c-width'], fotoboxCfg['cam-c-height'])
+        # self.camera.capture(self.temp+self.lastPhoto)
+        print("TODO")
       else:
         myCmd = 'gphoto2 --capture-image-and-download --filename '+self.temp+self.lastPhoto
         answer = os.popen(myCmd).read()
@@ -343,7 +354,8 @@ class Ui_Form_mod(object):
       self.isLive=False
       self.tplImage = "init.png"
       if not fotoboxCfg['nopi']:
-        self.camera.stop_preview()
+        # self.camera.stop_preview()
+        print("TODO")
 
     self.entries = None
     self.entries = (os.path.join(self.save, fn) for fn in os.listdir(self.save))
@@ -480,20 +492,6 @@ class QWebView_mod(QWebView):
     elif e.key() == QtCore.Qt.Key_3:
       self.buttonPress(3)
 
-if not fotoboxCfg['nopi']:
-  GPIO.setmode(GPIO.BCM)
-
-  GPIO.setup(26, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-  GPIO.setup(20, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-  GPIO.setup(13, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-
-  GPIO.setup(19, GPIO.OUT)
-  GPIO.setup(21, GPIO.OUT)
-  GPIO.setup(16, GPIO.OUT)
-
-  GPIO.output(19, GPIO.HIGH)
-  GPIO.output(21, GPIO.HIGH)
-  GPIO.output(16, GPIO.HIGH)
 
 app = QApplication(sys.argv)
 window = QWebView_mod()
