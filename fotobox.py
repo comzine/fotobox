@@ -16,6 +16,8 @@ from PyQt5.QtWidgets import QApplication, QDialog
 from PyQt5.QtWebKitWidgets import QWebView
 from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow
 
+from PIL import Image, ImageDraw
+
 if not fotoboxCfg['nopi']:
   try:
     from picamera import PiCamera
@@ -42,15 +44,27 @@ class Ui_Form_mod(object):
     Form.setHtml("Initializing...")
     self.countdownTime = fotoboxCfg['countdown']
     self.entries = None
-    self.tplFooterOrg = "Fotobox 0.2 · © Florian Knodt · BitBastelei//Adlerweb · www.adlerweb.info"
+    self.tplFooterOrg = "Fotobox 0.4 · © Tobias Weber, Maria Weber, Florian Knodt"
     self.tplImage = "init.png"
     self.tplFooter = self.tplFooterOrg
     self.tplInstruct = "Instruction placeholder"
     self.tplBtn1 = "Button 1"
     self.tplBtn2 = "Button 2"
     self.tplBtn3 = "Button 3"
+    self.tplInstructPreview = ""
+    self.picturesTaken = 0
+    self.composed = {}
+    self.composed["first"] = ""
+    self.composed["second"] = ""
+    self.composed["third"] = ""
+    self.composed["forth"] = ""
+    self.composed["composed"] = '../'+fotoboxCfg["template"]
+    self.timerCountdown = ""
     with open('design/template.html', 'r') as myfile:
       self.template=myfile.read().replace('\n', '')
+
+    with open('design/templateBlack.html', 'r') as myfile2:
+      self.templateBlack=myfile2.read().replace('\n', '')
 
     if fotoboxCfg['nopi']:
       self.tplFooterOrg = "Demo simulation mode"
@@ -101,8 +115,15 @@ class Ui_Form_mod(object):
     data = data.replace('${btn2}', self.tplBtn2, 1)
     data = data.replace('${btn3}', self.tplBtn3, 1)
     data = data.replace('${info}', self.tplInstruct, 1)
+    data = data.replace('${infoPreview}', self.tplInstructPreview, 1)
     data = data.replace('${status}', self.tplFooter, 1)
     data = data.replace('${image}', self.tplImage, 1)
+    data = data.replace('${compose}', self.composed["composed"], 1)
+    data = data.replace('${timer}', self.timerCountdown, 1)
+    Form.setHtml(data, QUrl('file://'+os.path.dirname(os.path.realpath(__file__))+'/design/.'))
+
+  def updateHtmlBlack(self, Form):
+    data = self.templateBlack
     Form.setHtml(data, QUrl('file://'+os.path.dirname(os.path.realpath(__file__))+'/design/.'))
 
   def screenMain(self, Form):
@@ -113,12 +134,46 @@ class Ui_Form_mod(object):
     self.tplBtn2 = fotoboxText['btn-view']
     self.tplBtn3 = fotoboxText['btn-empty']
 
+    GPIO.output(21, GPIO.HIGH) # grün
+    GPIO.output(16, GPIO.LOW) # gelb
+    GPIO.output(19, GPIO.LOW) # blau
+
     if not self.isLive:
       self.tplImage = "liveBack.png"
       if not fotoboxCfg['nopi']:
-        self.camera.start_preview(fullscreen=False, window = (fotoboxCfg['cam-p-x'], fotoboxCfg['cam-p-y'], fotoboxCfg['cam-p-width'], fotoboxCfg['cam-p-height']), hflip=fotoboxCfg['cam-p-hflip'])
+        self.camera.resolution = (1640, 1232)
+        #self.camera.preview_resolution = (1640, 1232)
+        #self.camera.resolution = (fotoboxCfg['cam-c-width'], fotoboxCfg['cam-c-height'])
+        self.camera.preview_fullscreen=False
+        self.camera.preview_window=(fotoboxCfg['cam-p-x'], fotoboxCfg['cam-p-y'], fotoboxCfg['cam-p-width'], fotoboxCfg['cam-p-height'])
+        #self.camera.start_preview(resolution=(1640, 1232), hflip=fotoboxCfg['cam-p-hflip'])
+        self.camera.start_preview(resolution=(1640, 1232), window = (fotoboxCfg['cam-p-x'], fotoboxCfg['cam-p-y'], fotoboxCfg['cam-p-width'], fotoboxCfg['cam-p-height']), hflip=fotoboxCfg['cam-p-hflip'])
+        #self.camera.start_preview(fullscreen=False, window = (fotoboxCfg['cam-p-x'], fotoboxCfg['cam-p-y'], fotoboxCfg['cam-p-width'], fotoboxCfg['cam-p-height']), hflip=fotoboxCfg['cam-p-hflip'])
+        #self.camera.start_preview(window = (fotoboxCfg['cam-p-x'], fotoboxCfg['cam-p-y'], fotoboxCfg['cam-p-width'], fotoboxCfg['cam-p-height']), hflip=fotoboxCfg['cam-p-hflip'])
+        # self.camera.start_preview(fullscreen=False, window = (fotoboxCfg['cam-p-x'], fotoboxCfg['cam-p-y'], fotoboxCfg['cam-p-width'], fotoboxCfg['cam-p-height']), hflip=fotoboxCfg['cam-p-hflip'])
         print("Enabling camera preview")
       self.isLive = True
+
+    self.tplFooter = self.tplFooterOrg
+
+    self.tplInstructPreview = self.tplInstruct
+
+    self.updateHtml(Form)
+
+  def screenPrint(self, Form):
+    self.screen = 5
+
+    self.tplInstruct = fotoboxText['info-home']
+    self.tplBtn1 = fotoboxText['btn-print']
+    self.tplBtn2 = fotoboxText['btn-cancel']
+    self.tplBtn3 = fotoboxText['btn-empty']
+    self.tplInstructPreview = fotoboxText['info-print']
+
+    GPIO.output(21, GPIO.HIGH) # grün
+    GPIO.output(16, GPIO.HIGH) # gelb
+    GPIO.output(19, GPIO.LOW) # blau
+
+    self.tplImage = self.composed["composed"]
 
     self.tplFooter = self.tplFooterOrg
 
@@ -126,15 +181,17 @@ class Ui_Form_mod(object):
 
   def screenCapture(self, Form):
     self.screen = 2
-
     self.tplBtn1 = fotoboxText['btn-empty']
     self.tplBtn2 = fotoboxText['btn-empty']
     self.tplBtn3 = fotoboxText['btn-empty']
 
+    GPIO.output(21, GPIO.LOW) # grün aus
+
     if not self.isLive:
       self.tplImage = "liveBack.png"
       if not fotoboxCfg['nopi']:
-        self.camera.start_preview(fullscreen=False, window = (fotoboxCfg['cam-p-x'], fotoboxCfg['cam-p-y'], fotoboxCfg['cam-p-width'], fotoboxCfg['cam-p-height']), hflip=fotoboxCfg['cam-p-hflip'])
+        self.camera.preview_window=(fotoboxCfg['cam-p-x'], fotoboxCfg['cam-p-y'], fotoboxCfg['cam-p-width'], fotoboxCfg['cam-p-height'])
+        self.camera.start_preview(resolution=(1640, 1232), fullscreen=False, window = (fotoboxCfg['cam-p-x'], fotoboxCfg['cam-p-y'], fotoboxCfg['cam-p-width'], fotoboxCfg['cam-p-height']), hflip=fotoboxCfg['cam-p-hflip'])
         print("Enabling camera preview")
       self.isLive = True
 
@@ -148,9 +205,13 @@ class Ui_Form_mod(object):
 
   def updateCountdown(self):
     Form = window
-
+    self.tplInstructPreview = ""
     self.tplInstruct = fotoboxText['info-count']
-    self.tplInstruct = self.tplInstruct.replace('${countdown}', str(self.countdownTime), 1)
+    # self.tplInstruct = self.tplInstruct.replace('${countdown}', str(self.countdownTime), 1)
+    if self.countdownTime > 0:
+      self.timerCountdown = str(self.countdownTime)
+    else:
+      self.timerCountdown = ""
     self.updateHtml(Form)
 
     self.countdownTime-=1
@@ -165,7 +226,7 @@ class Ui_Form_mod(object):
       self.tplInstruct = fotoboxText['info-capture']
       self.tplImage = "capturing.png"
       self.tplFooter = "Capturing..."
-      self.updateHtml(Form)
+      self.updateHtmlBlack(Form)
       self.timerCnt.start(250)
     else:
       self.photoTake(Form)
@@ -176,34 +237,80 @@ class Ui_Form_mod(object):
       if not fotoboxCfg['nopi']:
         self.camera.stop_preview()
         print("Disabling camera preview")
-
     self.lastPhoto = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".jpg"
     if not fotoboxCfg['nopi']:
-      self.camera.resolution = (fotoboxCfg['cam-c-width'], fotoboxCfg['cam-c-height'])
-      self.camera.capture(self.temp+self.lastPhoto)
+      if not fotoboxCfg['gphoto']:
+        self.camera.resolution = (fotoboxCfg['cam-c-width'], fotoboxCfg['cam-c-height'])
+        self.camera.capture(self.temp+self.lastPhoto)
+      else:
+        myCmd = 'gphoto2 --capture-image-and-download --filename '+self.temp+self.lastPhoto
+        answer = os.popen(myCmd).read()
     else:
       copyfile(os.path.dirname(os.path.realpath(__file__)) + '/design/dummy.jpg', self.temp+self.lastPhoto)
-
     self.screenReview(Form)
 
   def send_print(self, filename):
     try:
       conn = cups.Connection()
-      printers = conn.getPrinters()
-      # default_printer = printers.keys()[self.selected_printer]#defaults to the first printer installed
+      printers = conn.getPrinters ()
       default_printer = conn.getDefault()
-      cups.setUser("pi")
-      conn.printFile(default_printer, filename, '', {'fit-to-page':'True'})
+      print ("Drucke" + filename)
+      conn.printFile(default_printer, filename, "foto", {'fit-to-page':'True'})
     except:
       pass
 
+  def createComposedImage(self):
+    image1= Image.open(os.path.dirname(os.path.realpath(__file__)) + '/' + fotoboxCfg["template"])
+    if self.picturesTaken != 0:
+        image1 = Image.open(self.composed["composed"])
+    image1cpy = image1.copy()
+    image2 = Image.open(self.save+self.lastPhoto)
+    image2cpy = image2.copy()
+    # 4:3 744 558
+    # 3:2 750 500
+    faktor = 2
+    image2cpy = image2cpy.resize((750 * faktor, 500 * faktor), Image.ANTIALIAS)
+    if self.picturesTaken == 0:
+        # image1cpy.paste(image2cpy, (61, 42))
+        image1cpy.paste(image2cpy, (61 * faktor, 42 * faktor))
+    elif self.picturesTaken == 1:
+        # image1cpy.paste(image2cpy, (981, 42))
+        image1cpy.paste(image2cpy, (981 * faktor, 42 * faktor))
+    elif self.picturesTaken == 2:
+        #image1cpy.paste(image2cpy, (61, 638))
+        image1cpy.paste(image2cpy, (61 * faktor, 638 * faktor))
+    elif self.picturesTaken == 3:
+        #image1cpy.paste(image2cpy, (981, 638))
+        image1cpy.paste(image2cpy, (981 * faktor, 638 * faktor))
+    self.picturesTaken += 1
+    self.composed["composed"] = self.temp+"composed_"+datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".jpg"
+    if image1cpy.mode in ("RGBA", "P"):
+      image1cpy = image1cpy.convert("RGB")
+    image1cpy.save(self.composed["composed"])
+    if self.picturesTaken == 4:
+        image2 = Image.open(os.path.dirname(os.path.realpath(__file__)) + '/' + fotoboxCfg["templateOverlay"])
+        image2cpy = image2.copy()
+        image2cpy = image2cpy.resize((image1cpy.width, image1cpy.height), Image.ANTIALIAS)
+        image1cpy.paste(image2cpy, (0, 0), image2cpy)
+        if image1cpy.mode in ("RGBA", "P"):
+          image1cpy = image1cpy.convert("RGB")
+        image1cpy.save(self.composed["composed"])
+        self.picturesTaken = 0
+        self.screenPrint(window)
+    else:
+      # self.screenMain(window)
+      self.screenCapture(window)
+
+
   def screenReview(self, Form):
     self.screen = 3
-
-    self.tplInstruct = fotoboxText['info-review']
+    self.tplInstructPreview = fotoboxText['info-review']
     self.tplBtn1 = fotoboxText['btn-save']
     self.tplBtn2 = fotoboxText['btn-recapture']
     self.tplBtn3 = fotoboxText['btn-cancel']
+    GPIO.output(21, GPIO.HIGH) # grün
+    GPIO.output(16, GPIO.HIGH) # gelb
+    GPIO.output(19, GPIO.HIGH) # blau
     self.tplImage = self.temp+self.lastPhoto
     self.tplFooter = "Foto: " + self.lastPhoto
 
@@ -213,6 +320,8 @@ class Ui_Form_mod(object):
     if self.lastPhoto != "" and os.path.isfile(self.temp+self.lastPhoto):
       os.remove(self.temp+self.lastPhoto)
       self.lastPhoto = ""
+    self.picturesTaken = 0
+    self.composed["composed"] = '../'+fotoboxCfg["template"]
 
   def noConfirm(self, Form):
     self.tempDel()
@@ -221,11 +330,10 @@ class Ui_Form_mod(object):
   def doConfirm(self, Form):
     move(self.temp+self.lastPhoto, self.save+self.lastPhoto)
     print("Saved " + self.save+self.lastPhoto)
-    self.send_print(self.save+self.lastPhoto)
-    self.screenMain(window)
+    self.createComposedImage()
 
   def retry(self, Form):
-    self.tempDel()
+    # self.tempDel()
     self.screenCapture(window)
 
   def startViewer(self, Form):
@@ -292,12 +400,6 @@ class QWebView_mod(QWebView):
     self.setCursor(QtGui.QCursor(QtCore.Qt.BlankCursor))
 
     if not fotoboxCfg['nopi']:
-      GPIO.setmode(GPIO.BCM)
-
-      GPIO.setup(17, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-      GPIO.setup(21, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-      GPIO.setup(22, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-
       self.btnC1 = GPIO.HIGH
       self.btnC2 = GPIO.HIGH
       self.btnC3 = GPIO.HIGH
@@ -313,21 +415,21 @@ class QWebView_mod(QWebView):
   def buttonCheck(self):
     if not fotoboxCfg['nopi']:
       if self.btnB == 0:
-        if GPIO.input(17) != self.btnC1:
+        if GPIO.input(26) != self.btnC1:
           self.btnB =3
-          if GPIO.input(17) == GPIO.LOW:
+          if GPIO.input(26) == GPIO.LOW:
             self.buttonPress(1)
-          self.btnC1 = GPIO.input(17)
-        if GPIO.input(21) != self.btnC2:
+          self.btnC1 = GPIO.input(26)
+        if GPIO.input(13) != self.btnC2:
           self.btnB = 3
-          if GPIO.input(21) == GPIO.LOW:
-            self.buttonPress(2)
-          self.btnC2 = GPIO.input(21)
-        if GPIO.input(22) != self.btnC3:
-          self.btnB = 3
-          if GPIO.input(22) == GPIO.LOW:
+          if GPIO.input(13) == GPIO.LOW:
             self.buttonPress(3)
-          self.btnC3 = GPIO.input(22)
+          self.btnC2 = GPIO.input(13)
+        if GPIO.input(20) != self.btnC3:
+          self.btnB = 3
+          if GPIO.input(20) == GPIO.LOW:
+            self.buttonPress(2)
+          self.btnC3 = GPIO.input(20)
       else:
         self.btnB -= 1
 
@@ -337,8 +439,15 @@ class QWebView_mod(QWebView):
     if(self.ui.screen == 1):
       if(btn == 1):
         self.ui.screenCapture(self)
-      elif(btn == 2):
-        self.ui.startViewer(self)
+      #elif(btn == 2):
+      #  self.ui.startViewer(self)
+      elif(btn == 3): # reset printer
+        GPIO.output(21, GPIO.LOW) # grün
+        GPIO.output(16, GPIO.HIGH) # gelb
+        os.system('cupsenable photoprinter')
+        sleep(1)
+        GPIO.output(21, GPIO.HIGH) # grün
+        GPIO.output(16, GPIO.LOW) # gelb
     elif(self.ui.screen == 3):
       if(btn == 1):
         self.ui.doConfirm(self)
@@ -353,6 +462,13 @@ class QWebView_mod(QWebView):
         self.ui.viewPrev(self)
       elif(btn == 3):
         self.ui.screenMain(self)
+    elif(self.ui.screen == 5):
+      if(btn == 1):
+        print("Drucke " + self.ui.composed["composed"])
+        self.ui.send_print(self.ui.composed["composed"])
+        self.ui.noConfirm(self)
+      elif(btn == 2):
+        self.ui.screenMain(self)
 
   def keyPressEvent(self, e):
     if e.key() == QtCore.Qt.Key_Escape:
@@ -363,6 +479,21 @@ class QWebView_mod(QWebView):
       self.buttonPress(2)
     elif e.key() == QtCore.Qt.Key_3:
       self.buttonPress(3)
+
+if not fotoboxCfg['nopi']:
+  GPIO.setmode(GPIO.BCM)
+
+  GPIO.setup(26, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+  GPIO.setup(20, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+  GPIO.setup(13, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
+  GPIO.setup(19, GPIO.OUT)
+  GPIO.setup(21, GPIO.OUT)
+  GPIO.setup(16, GPIO.OUT)
+
+  GPIO.output(19, GPIO.HIGH)
+  GPIO.output(21, GPIO.HIGH)
+  GPIO.output(16, GPIO.HIGH)
 
 app = QApplication(sys.argv)
 window = QWebView_mod()
