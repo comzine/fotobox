@@ -70,6 +70,8 @@ class Ui_Form_mod(object):
       self.tplFooterOrg = "Demo simulation mode"
 
   def initSystem(self, Form):
+    myCmd = 'pkill -f gphoto2'
+    answer = os.popen(myCmd).read()
     #Camera
     if not fotoboxCfg['nopi']:
       self.camera = PiCamera()
